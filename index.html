@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salacca Pro - บันทึกรายวัน</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Anuphan', sans-serif; background-color: #0b0f19; }
+        
+    </style>
+</head>
+
+<body class="text-slate-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+        <div class="mb-5 text-center">
+            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-200 tracking-wide">SALACCA PRO</h1>
+            <p class="text-slate-400 text-xs mt-1">ระบบบันทึกรายรับ-รายจ่ายสวนสละอัจฉริยะ</p>
+        </div>
+<nav class="max-w-md mx-auto my-6 flex bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-xl">
+    <a href="index.html" class="flex-1 py-2.5 rounded-xl font-bold text-center bg-orange-500 text-slate-950">📝 บันทึก</a>
+    <a href="dashboard.html" class="flex-1 py-2.5 rounded-xl font-bold text-center text-slate-400">📊 แดชบอร์ด</a>
+</nav>
+        <form id="cash-form" class="space-y-4 text-sm" onsubmit="submitForm(event)">
+            <div>
+                <label class="block text-slate-400 font-medium mb-1">👤 ผู้จดบันทึก</label>
+                <select id="form-user" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500 text-base">
+                    <option value="พ่อ">คุณพ่อ</option>
+                    <option value="กิ๊ฟ">คุณกิ๊ฟ</option>
+                    <option value="บอส">คุณบอล</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-slate-400 font-medium mb-1">🏷️ ประเภทรายการ</label>
+                <select id="form-type" onchange="handleTypeChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500 text-base">
+                    <option value="รายรับ">🟢 รายรับ (ขายสละ / ลอยแก้ว)</option>
+                    <option value="เงินลงทุน">🔴 เงินลงทุน (ซื้อปุ๋ย/ยา/อุปกรณ์)</option>
+                    <option value="ค่าน้ำมัน">⛽ ค่าน้ำมัน/ขนส่ง</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-slate-400 font-medium mb-1">📝 รายละเอียด</label>
+                <input type="text" id="form-detail-input" placeholder="เช่น สละลอยแก้วสูตรดั้งเดิม, ซื้อปุ๋ยสูตรหวาน" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 text-base" required>
+                <select id="form-detail-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500 text-base hidden">
+                    <option value="ค่าน้ำมัน">⛽ ค่าน้ำมัน</option>
+                    <option value="ค่าส่ง">📦 ค่าจัดส่งสินค้า</option>
+                </select>
+            </div>
+
+            <div id="quantity-section" class="grid grid-cols-2 gap-3 transition-all duration-200">
+                <div>
+                    <label class="block text-slate-400 font-medium mb-1">📦 จำนวนที่ขาย/ซื้อ</label>
+                    <input type="number" id="form-quantity" placeholder="0" min="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 text-base">
+                </div>
+                <div>
+                    <label class="block text-slate-400 font-medium mb-1">⚖️ หน่วยนับ</label>
+                    <select id="form-unit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500 text-base">
+                        <option value="ถ้วย">ถ้วย (ลอยแก้ว)</option>
+                        <option value="กิโลกรัม">กิโลกรัม (โล)</option>
+                        <option value="ถุง">ถุง</option>
+                        <option value="กล่อง">กล่อง / ลัง</option>
+                        <option value="รายการ">รายการ</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-slate-400 font-medium mb-1">💰 จำนวนเงินสุทธิ (บาท)</label>
+                <input type="number" id="form-amount" placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-orange-500 text-base" required>
+            </div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-bold py-3.5 rounded-xl hover:opacity-90 transition-all active:scale-[0.99] text-base shadow-lg mt-2">
+                🍊 บันทึกข้อมูลเข้า Sheets
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // แก้ไขลิงก์ให้เป็น Web App URL (/exec) ที่ถูกต้องแล้วครับ
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwHGDOeu51RNwlwHI5WMy4iGnwEmmI6tt8IRBWDxEQQZA8slonYviakXe5BuMgYgp9o/exec'; 
+
+        function handleTypeChange() {
+            const type = document.getElementById('form-type').value;
+            const qtySection = document.getElementById('quantity-section');
+            const qtyInput = document.getElementById('form-quantity');
+            
+            const detailInput = document.getElementById('form-detail-input');
+            const detailSelect = document.getElementById('form-detail-select');
+
+            if (type === 'ค่าน้ำมัน') {
+                qtySection.classList.add('hidden');
+                qtyInput.required = false;
+                qtyInput.value = '';
+
+                detailInput.classList.add('hidden');
+                detailInput.required = false;
+                
+                detailSelect.classList.remove('hidden');
+            } else {
+                qtySection.classList.remove('hidden');
+                qtyInput.required = true;
+
+                detailSelect.classList.add('hidden');
+                
+                detailInput.classList.remove('hidden');
+                detailInput.required = true;
+            }
+        }
+
+        handleTypeChange();
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.innerText = '⏳ ระบบกำลังบันทึกข้อมูล...';
+            btn.disabled = true;
+
+            const type = document.getElementById('form-type').value;
+            const qtyValue = document.getElementById('form-quantity').value;
+            const unitValue = document.getElementById('form-unit').value;
+
+            let detailText = (type === 'ค่าน้ำมัน') 
+                ? document.getElementById('form-detail-select').value 
+                : document.getElementById('form-detail-input').value;
+
+            let finalDetail = detailText;
+            if (type !== 'ค่าน้ำมัน' && qtyValue) {
+                finalDetail = `${detailText} (${qtyValue} ${unitValue})`;
+            }
+
+            const payload = {
+                user: document.getElementById('form-user').value,
+                type: type,
+                detail: finalDetail,
+                amount: document.getElementById('form-amount').value
+            };
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                document.getElementById('form-detail-input').value = '';
+                document.getElementById('form-quantity').value = '';
+                document.getElementById('form-amount').value = '';
+                
+                btn.className = "w-full bg-emerald-500 text-slate-950 font-bold py-3.5 rounded-xl transition-all text-base shadow-lg mt-2";
+                btn.innerText = '✅ บันทึกเข้าคลัง Sheets สำเร็จ!';
+                
+                setTimeout(() => {
+                    btn.className = "w-full bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-bold py-3.5 rounded-xl hover:opacity-90 transition-all active:scale-[0.99] text-base shadow-lg mt-2";
+                    btn.innerText = '🍊 บันทึกข้อมูลเข้า Sheets';
+                    btn.disabled = false;
+                    handleTypeChange();
+                }, 1500);
+
+            } catch (error) {
+                console.error("Error signing:", error);
+                alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้งครับ');
+                btn.disabled = false;
+                btn.innerText = '🍊 บันทึกข้อมูลเข้า Sheets';
+            }
+        }
+    </script>
+</body>
+</html>
