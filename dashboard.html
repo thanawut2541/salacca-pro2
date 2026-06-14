@@ -28,9 +28,9 @@
             <p class="text-slate-400 text-xs mt-1.5 font-light">ระบบแดชบอร์ดวิเคราะห์ผลประกอบการสวนสละอัจฉริยะ (Executive View)</p>
         </div>
         <nav class="max-w-7xl mx-auto my-6 flex bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-xl">
-    <a href="index.html" class="flex-1 py-2.5 rounded-xl font-bold text-center text-slate-400">📝 บันทึก</a>
-    <a href="dashboard.html" class="flex-1 py-2.5 rounded-xl font-bold text-center bg-orange-500 text-slate-950">📊 แดชบอร์ด</a>
-</nav>
+            <a href="index.html" class="flex-1 py-2.5 rounded-xl font-bold text-center text-slate-400">📝 บันทึก</a>
+            <a href="dashboard.html" class="flex-1 py-2.5 rounded-xl font-bold text-center bg-orange-500 text-slate-950">📊 แดชบอร์ด</a>
+        </nav>
         <div class="bg-slate-900/90 border border-slate-800/80 px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg">
             <span class="flex h-2 w-2 relative">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -130,11 +130,25 @@
     </div>
 
     <script>
-        // ลิงก์ Web App อัจฉริยะของท่านประธาน
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwHGDOeu51RNwlwHI5WMy4iGnwEmmI6tt8IRBWDxEQQZA8slonYviakXe5BuMgYgp9o/exec'; 
+        // ลิงก์ Web App ของท่านประธาน
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwHGDOeu51RNwlwHI5WMy4iGnwEmmI6tt8IRBWDxEQQZA8slonYviakXe5BuMgYgp9o/exec';
 
         let donutChart;
-        let barChart; // ตัวแปรสำหรับคุมกราฟแท่งตัวใหม่
+        let barChart;
+
+        // ============================================================
+        // ฟังก์ชันหาชื่อ field อัตโนมัติ — รองรับทั้ง AppSheet และ GAS
+        // ============================================================
+        function resolveFields(item) {
+            // ลำดับความสำคัญ: ชื่อภาษาไทย (AppSheet) → ชื่อสั้น (GAS เดิม)
+            return {
+                type:     item["ประเภทรายการ"] ?? item.type ?? '',
+                amount:   item["จำนวนเงิน"]    ?? item.amount ?? 0,
+                datetime: item["วันเวลา"]       ?? item.datetime ?? '',
+                user:     item["ผู้บันทึก"]     ?? item.user ?? '-',
+                detail:   item["รายละเอียด"]    ?? item.detail ?? item.item ?? '-',
+            };
+        }
 
         async function fetchData() {
             if (API_URL === '') return;
@@ -142,81 +156,94 @@
             try {
                 const response = await fetch(API_URL);
                 const rawData = await response.json();
-                
-                const data = rawData.filter(item => item.type && item.amount !== "");
 
-                let totalInvestment = 0;
-                let totalRevenue = 0;
-                let totalGas = 0;
-                let tableRowsHtml = '';
-
-                // เอาข้อมูลล่าสุดขึ้นโชว์ตารางก่อน
-                const orderedData = [...data].reverse();
-
-                data.forEach(item => {
-                    const amount = parseFloat(item.amount) || 0;
-                    if (item.type === 'เงินลงทุน') totalInvestment += amount;
-                    if (item.type === 'รายรับ') totalRevenue += amount;
-                    if (item.type === 'ค่าน้ำมัน') totalGas += amount;
+                // กรองแถวที่มีประเภทรายการจริง (รองรับทั้งสองชุด key)
+                const data = rawData.filter(item => {
+                    const f = resolveFields(item);
+                    return f.type !== '';
                 });
 
-                // วนลูปพ่นแถวลงตาราง
-                orderedData.forEach(item => {
-                    const amount = parseFloat(item.amount) || 0;
-                    
-                    let badgeColor = 'bg-slate-800 text-slate-400 border-slate-700';
-                    if (item.type === 'รายรับ') badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                    if (item.type === 'เงินลงทุน') badgeColor = 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-                    if (item.type === 'ค่าน้ำมัน') badgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                let totalInvestment = 0;
+                let totalRevenue    = 0;
+                let totalGas        = 0;
+                let tableRowsHtml   = '';
 
-                    const displayDate = item.datetime ? new Date(item.datetime).toLocaleDateString('th-TH') : '-';
-                    
+                const orderedData = [...data].reverse();
+
+                // คำนวณยอดรวม
+                data.forEach(item => {
+                    const f      = resolveFields(item);
+                    const amount = parseFloat(f.amount) || 0;
+                    if (f.type === 'เงินลงทุน') totalInvestment += amount;
+                    if (f.type === 'รายรับ')    totalRevenue    += amount;
+                    if (f.type === 'ค่าน้ำมัน') totalGas        += amount;
+                });
+
+                // สร้างแถวตาราง
+                orderedData.forEach(item => {
+                    const f      = resolveFields(item);
+                    const amount = parseFloat(f.amount) || 0;
+
+                    let badgeColor = 'bg-slate-800 text-slate-400 border-slate-700';
+                    if (f.type === 'รายรับ')    badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                    if (f.type === 'เงินลงทุน') badgeColor = 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+                    if (f.type === 'ค่าน้ำมัน') badgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+                    // แปลงวันที่ให้สวยงาม (รองรับทั้ง ISO string และ string ภาษาไทย)
+                    let displayDate = f.datetime || '-';
+                    if (f.datetime) {
+                        const parsed = new Date(f.datetime);
+                        if (!isNaN(parsed)) {
+                            displayDate = parsed.toLocaleDateString('th-TH');
+                        }
+                    }
+
+                    const revenueClass = f.type === 'รายรับ' ? 'text-emerald-400' : 'text-slate-300';
+
                     tableRowsHtml += `
                         <tr class="hover:bg-slate-900/40 transition-colors">
                             <td class="py-3 px-4 text-slate-500 font-normal">${displayDate}</td>
-                            <td class="py-3 px-4 font-normal text-slate-300">${item.user || '-'}</td>
-                            <td class="py-3 px-4"><span class="px-2 py-0.5 border text-[10px] rounded-md ${badgeColor}">${item.type}</span></td>
-                            <td class="py-3 px-4 text-slate-400 font-light">${item.detail || item.item || '-'}</td>
-                            <td class="py-3 px-4 text-right font-medium ${item.type === 'รายรับ' ? 'text-emerald-400' : 'text-slate-300'}">฿${amount.toLocaleString()}</td>
+                            <td class="py-3 px-4 font-normal text-slate-300">${f.user}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 border text-[10px] rounded-md ${badgeColor}">${f.type}</span></td>
+                            <td class="py-3 px-4 text-slate-400 font-light">${f.detail}</td>
+                            <td class="py-3 px-4 text-right font-medium ${revenueClass}">฿${amount.toLocaleString()}</td>
                         </tr>
                     `;
                 });
 
                 const netCash = totalRevenue - totalInvestment - totalGas;
 
-                // พ่นข้อมูลลงการ์ดตัวเลข
+                // อัปเดตตัวเลขหน้าจอ
                 document.getElementById('total-investment').innerText = `฿${totalInvestment.toLocaleString()}`;
-                document.getElementById('total-revenue').innerText = `฿${totalRevenue.toLocaleString()}`;
-                document.getElementById('total-gas').innerText = `฿${totalGas.toLocaleString()}`;
-                document.getElementById('net-cash').innerText = (netCash >= 0 ? '฿' : '-฿') + Math.abs(netCash).toLocaleString();
-                
-                if (tableRowsHtml === '') {
-                    tableRowsHtml = '<tr><td colspan="5" class="py-6 text-center text-slate-600 font-light">ยังไม่มีข้อมูลในฐานบัญชี</td></tr>';
-                }
-                document.getElementById('data-table-body').innerHTML = tableRowsHtml;
+                document.getElementById('total-revenue').innerText    = `฿${totalRevenue.toLocaleString()}`;
+                document.getElementById('total-gas').innerText        = `฿${totalGas.toLocaleString()}`;
+                document.getElementById('net-cash').innerText         = (netCash >= 0 ? '฿' : '-฿') + Math.abs(netCash).toLocaleString();
 
-                // บล็อกคำนวณสถานะจุดคืนทุน
+                document.getElementById('data-table-body').innerHTML = tableRowsHtml ||
+                    '<tr><td colspan="5" class="py-6 text-center text-slate-600 font-light">ยังไม่มีข้อมูลในฐานบัญชี</td></tr>';
+
+                // สถานะจุดคืนทุน
                 const statusCard = document.getElementById('status-card');
-                const statusBox = document.getElementById('status-box');
+                const statusBox  = document.getElementById('status-box');
                 const statusText = document.getElementById('status-text');
+                const netEl      = document.getElementById('net-cash');
 
                 if (netCash < 0) {
-                    statusCard.className = "bg-gradient-to-br from-orange-950/20 to-slate-950 border border-orange-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden group";
-                    document.getElementById('net-cash').className = "text-3xl font-bold mt-2 text-orange-400 tracking-tight";
-                    statusBox.className = "mt-4 bg-orange-500/5 border border-orange-500/20 rounded-xl p-3";
+                    statusCard.className = "bg-gradient-to-br from-orange-950/20 to-slate-950 border border-orange-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden group transition-all duration-500";
+                    netEl.className      = "text-3xl font-bold mt-2 text-orange-400 tracking-tight";
+                    statusBox.className  = "mt-4 bg-orange-500/5 border border-orange-500/20 rounded-xl p-3";
                     statusText.innerHTML = `ท่านประธานครับ อีกเพียง <strong class="text-orange-400 font-medium">฿${Math.abs(netCash).toLocaleString()}</strong> จะถึงจุดคืนทุน 100% สู้ต่อไปครับ!`;
                 } else {
-                    statusCard.className = "bg-gradient-to-br from-emerald-950/20 to-slate-950 border border-emerald-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden group";
-                    document.getElementById('net-cash').className = "text-3xl font-bold mt-2 text-emerald-400 tracking-tight";
-                    statusBox.className = "mt-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3";
+                    statusCard.className = "bg-gradient-to-br from-emerald-950/20 to-slate-950 border border-emerald-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden group transition-all duration-500";
+                    netEl.className      = "text-3xl font-bold mt-2 text-emerald-400 tracking-tight";
+                    statusBox.className  = "mt-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3";
                     statusText.innerHTML = `🎉 ยินดีด้วยครับท่านประธาน! สวนสละทำกำไรสุทธิแล้ว <strong class="text-emerald-400 font-semibold">฿${netCash.toLocaleString()}</strong> สามารถดึงปันผลไปใช้ได้เลยครับ!`;
                 }
 
-                // เรียกฟังก์ชันเพื่อวาดและอัปเดตกราฟทั้งสองตัวพร้อมกัน
                 updateCharts(totalRevenue, totalInvestment, totalGas);
 
-                document.getElementById('sync-status').innerText = 'เชื่อมต่อคลังข้อมูลเรียลไทม์';
-                document.getElementById('sync-status').className = 'text-xs font-medium text-emerald-400';
+                document.getElementById('sync-status').innerText   = 'เชื่อมต่อคลังข้อมูลเรียลไทม์';
+                document.getElementById('sync-status').className   = 'text-xs font-medium text-emerald-400';
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -227,21 +254,17 @@
 
         function updateCharts(rev, inv, gas) {
             const hasData = (rev + inv + gas) > 0;
-            
-            // 1. จัดการกราฟวงกลม Donut
-            const ctxDonut = document.getElementById('salaccaDonutChart').getContext('2d');
-            if (donutChart) { donutChart.destroy(); }
-            
-            const donutData = hasData ? [rev, inv, gas] : [1];
-            const donutColors = hasData ? ['#10b981', '#f97316', '#f59e0b'] : ['#1e293b'];
 
+            // Donut
+            const ctxDonut = document.getElementById('salaccaDonutChart').getContext('2d');
+            if (donutChart) donutChart.destroy();
             donutChart = new Chart(ctxDonut, {
                 type: 'doughnut',
                 data: {
                     labels: ['รายรับ', 'เงินลงทุน', 'ค่าน้ำมัน'],
                     datasets: [{
-                        data: donutData,
-                        backgroundColor: donutColors,
+                        data: hasData ? [rev, inv, gas] : [1],
+                        backgroundColor: hasData ? ['#10b981', '#f97316', '#f59e0b'] : ['#1e293b'],
                         borderWidth: 0,
                         hoverOffset: hasData ? 5 : 0
                     }]
@@ -255,10 +278,9 @@
                 }
             });
 
-            // 2. จัดการกราฟแท่ง Bar Chart ตัวใหม่แกะกล่อง!
+            // Bar
             const ctxBar = document.getElementById('salaccaBarChart').getContext('2d');
-            if (barChart) { barChart.destroy(); }
-
+            if (barChart) barChart.destroy();
             barChart = new Chart(ctxBar, {
                 type: 'bar',
                 data: {
@@ -289,7 +311,7 @@
         }
 
         fetchData();
-        setInterval(fetchData, 30000); // ตั้งลูปดึงข้อมูลสดอัตโนมัติทุกๆ 30 วินาที
+        setInterval(fetchData, 30000);
     </script>
 </body>
 </html>
